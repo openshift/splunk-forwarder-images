@@ -1,3 +1,8 @@
+FROM registry.ci.openshift.org/openshift/release:golang-1.13 AS builder
+COPY audit-filter /go/src/audit-filter
+WORKDIR /go/src/audit-filter
+RUN make build
+
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
 ADD containers/forwarder/bin/run.sh /
@@ -15,13 +20,15 @@ RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk
     mkdir -p /opt/splunkforwarder/var/run/splunk/appserver/{i18n,modules/static/css} && \
     mkdir -p /opt/splunkforwarder/var/run/splunk/{upload,search_telemetry} && \
     mkdir -p /opt/splunkforwarder/var/spool/dirmoncache && \
-    mkdir -p /opt/splunkforwarder/etc/apps/osd_monitored_logs/{local,metadata} && \
+    mkdir -p /opt/splunkforwarder/etc/apps/osd_monitored_logs/{default,local,metadata} && \
     mkdir -p /opt/splunkforwarder/etc/apps/splunkauth/{default,local,metadata} && \
     chown -R splunk:splunk /opt/splunkforwarder && \
     chown -R splunk:splunk /run.sh && \
     chmod +x /run.sh && \
     sed -i 's/\.maxBackupIndex=5/\.maxBackupIndex=1/g' /opt/splunkforwarder/etc/log.cfg && \
     sed -i 's/\.maxFileSize=25000000/\.maxFileSize=250000/g' /opt/splunkforwarder/etc/log.cfg
+
+COPY --from=builder /go/src/audit-filter/audit-log-exporter /opt/splunkforwarder/etc/apps/osd_monitored_logs/bin/
 
 USER splunk
 CMD [ "/run.sh" ]

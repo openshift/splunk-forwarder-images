@@ -1,0 +1,164 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+metadata:
+  name: SplunkForwarder
+rules:
+# 1. drop common non-resource read requests (~10k/day)
+- level: None
+  nonResourceURLs:
+  - /
+  - /api*
+  - /healthz*
+  - /livez*
+  - /openapi/v2*
+  - /readyz*
+  - /version
+  - /.well-known*
+  verbs:
+  - get
+  - head
+  - options
+# 2. drop leases, tokenreviews, subjectaccessreviews (~100k/day)
+- level: None
+  resources:
+  - group: coordination.k8s.io
+    resources: ['leases']
+  - group: authentication.k8s.io
+    resources: ['tokenreviews']
+  - group: oauth.openshift.io
+    resources: ['tokenreviews']
+  - group: authorization.k8s.io
+    resources:
+    - subjectaccessreviews
+    - selfsubjectaccessreviews
+# 3. reduce events with sensitive content to metadata
+- level: Metadata
+  resources:
+  - group: machineconfiguration.openshift.io
+    resources: ['machineconfigs']
+  - resources: ['serviceaccounts/token']
+  - group: oauth.openshift.io
+    resources: ['oauthclients']
+  - group: image.openshift.io
+    resources: ['imagestreams/secrets']
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+# 4. always forward system:admin activity
+- level: Request
+  users: ['system:admin']
+# 5&6. always forward backplane activity (except for cronjob sa's)
+- level: None
+  users:
+  - system:serviceaccount:openshift-backplane:osd-delete-backplane-serviceaccounts
+  - system:serviceaccount:openshift-backplane-srep:osd-delete-ownerrefs-serviceaccounts
+- level: RequestResponse
+  userGroups:
+  - system:serviceaccounts:openshift-backplane-*
+# 7. drop control plane reads (~100k/day)
+- level: None
+  users:
+  - system:apiserver
+  - system:kube-apiserver
+  - system:kube-scheduler
+  - system:kube-controller-manager
+  verbs:
+  - get
+  - head
+  - list
+  - watch
+# 8. drop node and openshift-internal sa reads (~1M/day)
+- level: None
+  userGroups:
+  - system:nodes
+  - system:serviceaccounts:kube-*
+  - system:serviceaccounts:openshift-*
+  verbs:
+  - get
+  - list
+  - watch
+# 9. drop sre-build-test activity (~2k/day, large)
+- level: None
+  namespaces: ['openshift-build-test-*']
+# 10. always forward resources we're interested in
+- level: Request
+  resources:
+  - resources:
+    - pods
+  - group: compliance.openshift.io
+    resources:
+    - compliancecheckresults
+  - group: secscan.quay.redhat.com
+    resources:
+    - imagemanifestvulns
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+# 11. drop noisy system status updates (~100k/day)
+- level: None
+  userGroups:
+  - system:nodes
+  - system:serviceaccounts
+  - system:masters
+  resources:
+  - resources: ['*/status']
+  - group: apps
+    resources: ['*/status']
+  - group: batch
+    resources: ['*/status']
+  - group: managed.openshift.io
+    resources: ['subjectpermissions/status']
+  - group: operators.coreos.com
+    resources: ['catalogsources/status']
+  - group: apiserver.openshift.io
+    resources: ['apirequestcounts/*', 'apirequestcounts']
+  - group: controlplane.operator.openshift.io
+    resources: ['podnetworkconnectivitychecks/status']
+  - group: velero.io
+    resources: ['backups','backupstoragelocations/status']
+  verbs: ['update','patch']
+# 12. drop olm no-op updates (~10k/day)
+- level: None
+  users: ['system:serviceaccount:openshift-operator-lifecycle-manager:olm-operator-serviceaccount']
+  resources:
+  - resources: ['namespaces']
+  - group: operators.coreos.com
+    resources: ['clusterserviceversions']
+    resourceNames: ['packageserver']
+  - group: rbac.authorization.k8s.io
+    resources: ['clusterroles']
+  verbs: ['update','patch']
+# 13. drop cmo no-op secret updates (~1k/day)
+- level: None
+  users: ['system:serviceaccount:openshift-monitoring:cluster-monitoring-operator']
+  resources:
+  - resources: ['secrets']
+  verbs: ['update']
+# 14. drop console no-op route updates (~1k/day)
+- level: None
+  users: ['system:serviceaccount:openshift-console-operator:console-operator']
+  resources:
+  - group: route.openshift.io
+    resources: ['routes']
+    resourceNames: ['console','downloads']
+  verbs: ['update']
+# 15. drop clusterrole rbac aggregation updates (~500/day, large)
+- level: None
+  users: ['system:serviceaccount:kube-system:clusterrole-aggregation-controller']
+  resources:
+  - group: rbac.authorization.k8s.io
+    resources: ['clusterroles']
+  verbs: ['update','patch']
+# 16. drop cvo no-op imagestream updates (1k/day)
+- level: None
+  users: ['system:serviceaccount:openshift-cluster-version:default']
+  resources:
+  - group: image.openshift.io
+    resources: ['imagestreams']
+  verbs: ['update']
