@@ -25,5 +25,7 @@ RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk
     sed -i 's/\.maxBackupIndex=5/\.maxBackupIndex=1/g' /opt/splunk/etc/log.cfg && \
     sed -i 's/\.maxFileSize=25000000/\.maxFileSize=250000/g' /opt/splunk/etc/log.cfg
 
+COPY containers/heavy_forwarder/etc/defaults-disabled-inputs.conf /opt/splunk/etc/system/local/
+
 USER splunk
 CMD [ "/run.sh" ]

@@ -8,9 +8,13 @@ if [[ ${SPLUNK_ACCEPT_LICENSE} == "yes" ]]; then
     SPLUNK_ARGS="${SPLUNK_ARGS} --accept-license"
 fi
 
+if [[ "${SHIP_INTERNAL_LOGS}" == "false" ]]; then
+    cat etc/system/local/defaults-disabled-inputs.conf >> etc/system/local/inputs.conf
+fi
+
 ./bin/splunk start ${SPLUNK_ARGS}
 
-# The above command still forks to the background even with --nodaemon so 
+# The above command still forks to the background even with --nodaemon so
 # we do the tried and true while true sleep
 SPLINK_PID_FILE="/opt/splunkforwarder/var/run/splunk/splunkd.pid"
 while true; do

@@ -8,6 +8,10 @@ if [[ ${SPLUNK_ACCEPT_LICENSE} == "yes" ]]; then
     SPLUNK_ARGS="${SPLUNK_ARGS} --accept-license"
 fi
 
+if [[ "${SHIP_INTERNAL_LOGS}" == "false" ]]; then
+    cat etc/system/local/defaults-disabled-inputs.conf >> etc/system/local/inputs.conf
+fi
+
 # Switch to forwarder license
 ./bin/splunk edit licenser-groups Forwarder -is_active 1 ${SPLUNK_ARGS}
 
