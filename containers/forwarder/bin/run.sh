@@ -2,7 +2,7 @@
 
 cd /opt/splunkforwarder
 
-SPLUNK_ARGS="--answer-yes --gen-and-print-passwd --nodaemon"
+SPLUNK_ARGS="--answer-yes --no-prompt --gen-and-print-passwd --nodaemon"
 
 if [[ ${SPLUNK_ACCEPT_LICENSE} == "yes" ]]; then
     SPLUNK_ARGS="${SPLUNK_ARGS} --accept-license"

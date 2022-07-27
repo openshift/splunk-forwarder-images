@@ -1,6 +1,7 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
 ADD containers/forwarder/bin/run.sh /
+ADD containers/forwarder/bin/systemctl_wrapper.sh /bin/systemctl
 ADD .splunk-version /
 ADD .splunk-version-hash /
 RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk-version-hash) && \
@@ -19,7 +20,7 @@ RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk
     mkdir -p /opt/splunkforwarder/etc/apps/splunkauth/{default,local,metadata} && \
     chown -R splunk:splunk /opt/splunkforwarder && \
     chown -R splunk:splunk /run.sh && \
-    chmod +x /run.sh && \
+    chmod +x /run.sh /bin/systemctl && \
     sed -i 's/\.maxBackupIndex=5/\.maxBackupIndex=1/g' /opt/splunkforwarder/etc/log.cfg && \
     sed -i 's/\.maxFileSize=25000000/\.maxFileSize=250000/g' /opt/splunkforwarder/etc/log.cfg
 
