@@ -1,6 +1,7 @@
-FROM quay.io/app-sre/golangci-lint:latest AS builder
+FROM quay.io/app-sre/boilerplate:image-v5.0.0 AS builder
 ADD . /go/src/github.com/openshift/splunk-forwarder-images
 WORKDIR /go/src/github.com/openshift/splunk-forwarder-images
+RUN go mod vendor
 RUN env CGO_ENABLED=1 GOOS=linux go build -ldflags "-extldflags=-static -w -s" -o runner ./
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8-1072.1697626218
