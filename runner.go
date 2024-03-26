@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -22,11 +25,21 @@ import (
 const SplunkUser = "admin"
 const SplunkHost = "127.0.0.1:8089"
 const SplunkPath = "${SPLUNK_HOME}/bin/splunk"
-const SplunkCACert = "${SPLUNK_HOME}/etc/auth/cacert.pem"
+const SplunkAppsCACert = "${SPLUNK_HOME}/etc/auth/appsCA.pem"
+const SplunkCACert = "${SPLUNK_HOME}/etc/auth/ca.pem"
+const SplunkTrustedBundle = "${SPLUNK_HOME}/etc/auth/ca-bundle.pem"
+const TrustedCABundle = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
 const UserSeedPath = "${SPLUNK_HOME}/etc/system/local/user-seed.conf"
 const ServerConfigPath = "${SPLUNK_HOME}/etc/system/local/server.conf"
 const HealthEndpoint = "/services/server/health/splunkd/details"
-const SplunkPasswdPath = "${SPLUNK_HOME}/etc/passwd"
+const SplunkCryptPath = "${SPLUNK_HOME}/etc/passwd"
+const SplunkServerConfTemplate = `
+[httpServer]
+acceptFrom = 127.0.0.0/8
+[sslConfig]
+enableSplunkdSSL = false
+%s
+`
 
 type Status struct {
 	Health  string
@@ -75,10 +88,24 @@ func (s SplunkHealth) Flatten() map[string]Status {
 	return (Feature)(s).Flatten()
 }
 
+func expandEnv(s string) string {
+	if path, exists := os.LookupEnv("SPLUNK_HOME"); exists {
+		if filepath.IsAbs(path) {
+			if stat, err := os.Stat(path); err == nil && stat.IsDir() {
+				return os.ExpandEnv(s)
+			}
+		}
+	}
+	log.Fatal("SPLUNK_HOME must be a directory")
+	return s
+}
+
 func genPasswd() ([]byte, error) {
-	os.Remove(os.ExpandEnv(SplunkPasswdPath))
+	os.Remove(os.ExpandEnv(SplunkCryptPath))
 	passwd := new(bytes.Buffer)
-	if output, err := exec.Command(os.ExpandEnv(SplunkPath), "gen-random-passwd").Output(); err != nil {
+	cmd := expandEnv(SplunkPath)
+	args := []string{"gen-random-passwd"}
+	if output, err := exec.Command(cmd, args...).Output(); err != nil {
 		log.Fatal(err)
 		return nil, err
 	} else {
@@ -91,7 +118,7 @@ func genPasswd() ([]byte, error) {
 }
 
 func generateUserSeed() error {
-	if seedFile, err := os.OpenFile(os.ExpandEnv(UserSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if seedFile, err := os.OpenFile(expandEnv(UserSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return err
 	} else if passwd, err := genPasswd(); err != nil {
 		return err
@@ -102,20 +129,68 @@ func generateUserSeed() error {
 	}
 }
 
+func appendFile(dst io.Writer, path string) error {
+	if src, err := os.OpenFile(path, os.O_RDONLY, 0644); err != nil {
+		log.Print("Failed to open file: ", err)
+		return err
+	} else {
+		defer src.Close()
+		if _, err := io.Copy(dst, src); err != nil {
+			log.Print("Failed to read file: ", err)
+			return err
+		}
+	}
+	_, err := dst.Write([]byte("\n"))
+	return err
+}
+
 func enableSplunkAPI() error {
+
 	if serverFile, err := os.OpenFile(os.ExpandEnv(ServerConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return err
 	} else {
 		defer serverFile.Close()
-		_, err = fmt.Fprintf(serverFile, `[sslConfig]
-enableSplunkdSSL = false
-[httpServer]
-acceptFrom = 127.0.0.1/8
-[proxyConfig]
-http_proxy = %s
-https_proxy = %s
-no_proxy = %s
-`, os.Getenv("HTTP_PROXY"), os.Getenv("HTTPS_PROXY"), os.Getenv("no_proxy"))
+
+		if err := exec.Command("/usr/bin/update-ca-trust").Run(); err != nil {
+			log.Fatal(err)
+			return err
+		}
+
+		if caFile, err := os.OpenFile(os.ExpandEnv(SplunkTrustedBundle), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+			log.Fatal(err)
+			return err
+		} else {
+			defer caFile.Close()
+			if err := appendFile(caFile, TrustedCABundle); err != nil {
+				return err
+			}
+			if err := appendFile(caFile, os.ExpandEnv(SplunkAppsCACert)); err != nil {
+				return err
+			}
+		}
+
+		proxyConfig := ""
+
+		if http_proxy, exists := os.LookupEnv("HTTP_PROXY"); exists {
+			proxyConfig += "http_proxy = " + http_proxy + "\n"
+		}
+
+		if https_proxy, exists := os.LookupEnv("HTTPS_PROXY"); exists {
+			proxyConfig += "https_proxy = " + https_proxy + "\n"
+		}
+
+		if len(proxyConfig) != 0 {
+
+			if no_proxy, exists := os.LookupEnv("NO_PROXY"); exists {
+				proxyConfig += "no_proxy = " + no_proxy + "\n"
+			}
+
+			proxyConfig = "sslRootCAPath = " + expandEnv(SplunkTrustedBundle) + "\n[proxyConfig]\n" + proxyConfig
+			proxyConfig += "proxy_rules = splunkcloud.com\n"
+
+		}
+
+		_, err = fmt.Fprintf(serverFile, SplunkServerConfTemplate, proxyConfig)
 
 		return err
 	}
@@ -124,17 +199,29 @@ no_proxy = %s
 
 var cmd *exec.Cmd
 
-var ctx, stop = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 func RunSplunk() bool {
+	name := expandEnv(SplunkPath)
 	args := []string{"start", "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
-	cmd = exec.CommandContext(ctx, os.ExpandEnv(SplunkPath), args...)
+	cmd = exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
-	cmd.Start()
-	cmd.Wait()
+	if cmd.Start() != nil {
+		return false
+	}
+	if cmd.Wait() != nil {
+		return false
+	}
 	return ctx.Err() == nil
+}
+
+func writeResponse(w http.ResponseWriter, status int, message string) {
+	w.WriteHeader(status)
+	if _, err := w.Write([]byte(message + "\n")); err != nil {
+		log.Print("failed writing response: ", err.Error())
+	}
 }
 
 func StartServer() {
@@ -171,32 +258,36 @@ func StartServer() {
 
 	http.Handle("/livez", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("not ok"))
+			writeResponse(w, http.StatusInternalServerError, "not ok")
 		} else {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			writeResponse(w, http.StatusOK, "ok")
 		}
 	}))
 
 	http.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if health.Check() {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			writeResponse(w, http.StatusOK, "ok")
 		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("not ok"))
+			writeResponse(w, http.StatusInternalServerError, "not ok")
 		}
 		nok := map[bool]string{false: "not ok", true: "ok"}
 		if r.URL.Query().Has("verbose") {
 			for k, v := range health.Flatten() {
-				w.Write([]byte("\n[+]" + k + " " + nok[v.Healthy()]))
+				if _, err := w.Write([]byte("[+]" + k + " " + nok[v.Healthy()] + "\n")); err != nil {
+					log.Print("failed writing response: ", err.Error())
+					break
+				}
 			}
-			w.Write([]byte("\n"))
 		}
 	}))
 
-	http.ListenAndServe("0.0.0.0:8090", http.DefaultServeMux)
+	l, err := net.Listen("tcp", ":8090")
+	if err != nil { // nolint
+		log.Fatal(err)
+	}
+	s := http.Server{Handler: http.DefaultServeMux, ReadHeaderTimeout: time.Second * 5}
+
+	log.Fatal(s.Serve(l))
 
 }
 
