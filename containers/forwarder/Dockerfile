@@ -3,7 +3,7 @@ ADD . /go/src/github.com/openshift/splunk-forwarder-images
 WORKDIR /go/src/github.com/openshift/splunk-forwarder-images
 RUN env CGO_ENABLED=1 GOOS=linux go build -ldflags "-extldflags=-static -w -s" -o runner ./
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1137
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1161
 
 COPY --from=builder /go/src/github.com/openshift/splunk-forwarder-images/runner /
 ADD containers/forwarder/bin/systemctl_wrapper.sh /bin/systemctl
