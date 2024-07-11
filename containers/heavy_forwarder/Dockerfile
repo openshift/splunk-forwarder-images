@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-896.1717584414
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1018
 
 ADD containers/heavy_forwarder/bin/run.sh /
 ADD .splunk-version /
