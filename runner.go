@@ -177,11 +177,11 @@ func StartServer() {
 			gaugeVec.Reset()
 		}
 		for k, v := range health.Flatten() {
-			guage := gaugeVec.WithLabelValues(k)
+			gauge := gaugeVec.WithLabelValues(k)
 			if v.Healthy() {
-				guage.Set(0)
+				gauge.Set(0)
 			} else {
-				guage.Set(1)
+				gauge.Set(1)
 			}
 		}
 		handler.ServeHTTP(w, r)
