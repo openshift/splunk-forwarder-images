@@ -48,6 +48,11 @@ type Feature struct {
 
 type SplunkHealth Feature
 
+const (
+	splunkLicenseEnv        = "SPLUNK_LICENSE_ACCEPTED"
+	splunkFlagAcceptLicense = "--accept-license"
+)
+
 var healthURL = &url.URL{
 	Scheme:   "http",
 	Host:     SplunkHost,
@@ -128,6 +133,9 @@ var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.
 
 func RunSplunk() bool {
 	args := []string{"start", "--answer-yes", "--nodaemon"}
+	if os.Getenv(splunkLicenseEnv) != "" {
+		args = append(args, splunkFlagAcceptLicense)
+	}
 	args = append(args, os.Args[1:]...)
 	cmd = exec.CommandContext(ctx, os.ExpandEnv(SplunkPath), args...)
 	cmd.Stdout = os.Stderr
