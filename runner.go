@@ -48,6 +48,11 @@ type Feature struct {
 
 type SplunkHealth Feature
 
+const (
+	splunkLicenseEnv        = "SPLUNK_LICENSE_ACCEPTED"
+	splunkFlagAcceptLicense = "--accept-license"
+)
+
 var healthURL = &url.URL{
 	Scheme:   "http",
 	Host:     SplunkHost,
@@ -127,7 +132,7 @@ var cmd *exec.Cmd
 var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 func RunSplunk() bool {
-	args := []string{"start", "--answer-yes", "--nodaemon"}
+	args := []string{"start", splunkFlagAcceptLicense, "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
 	cmd = exec.CommandContext(ctx, os.ExpandEnv(SplunkPath), args...)
 	cmd.Stdout = os.Stderr
@@ -169,11 +174,11 @@ func StartServer() {
 			gaugeVec.Reset()
 		}
 		for k, v := range health.Flatten() {
-			guage := gaugeVec.WithLabelValues(k)
+			gauge := gaugeVec.WithLabelValues(k)
 			if v.Healthy() {
-				guage.Set(0)
+				gauge.Set(0)
 			} else {
-				guage.Set(1)
+				gauge.Set(1)
 			}
 		}
 		handler.ServeHTTP(w, r)
@@ -239,6 +244,13 @@ func main() {
 
 	if err := enableSplunkAPI(); err != nil {
 		log.Fatal("couldn't enable splunk api: ", err.Error())
+	}
+
+	if os.Getenv(splunkLicenseEnv) == "yes" {
+		log.Println("splunk license agreement has been accepted")
+	} else {
+		log.Println("you must accept the terms of the Splunk licensing agreement before using this software.")
+		log.Fatalf("set the variable %s to 'yes' to signal your acceptance of the licensing terms", splunkLicenseEnv)
 	}
 
 	go StartServer()
