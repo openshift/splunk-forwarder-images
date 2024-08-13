@@ -132,10 +132,7 @@ var cmd *exec.Cmd
 var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 func RunSplunk() bool {
-	args := []string{"start", "--answer-yes", "--nodaemon"}
-	if os.Getenv(splunkLicenseEnv) != "" {
-		args = append(args, splunkFlagAcceptLicense)
-	}
+	args := []string{"start", splunkFlagAcceptLicense, "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
 	cmd = exec.CommandContext(ctx, os.ExpandEnv(SplunkPath), args...)
 	cmd.Stdout = os.Stderr
@@ -247,6 +244,13 @@ func main() {
 
 	if err := enableSplunkAPI(); err != nil {
 		log.Fatal("couldn't enable splunk api: ", err.Error())
+	}
+
+	if os.Getenv(splunkLicenseEnv) == "yes" {
+		log.Println("splunk license agreement has been accepted")
+	} else {
+		log.Println("you must accept the terms of the Splunk licensing agreement before using this software.")
+		log.Fatalf("set the variable %s to 'yes' to signal your acceptance of the licensing terms", splunkLicenseEnv)
 	}
 
 	go StartServer()
