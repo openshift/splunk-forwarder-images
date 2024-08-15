@@ -49,7 +49,7 @@ type Feature struct {
 type SplunkHealth Feature
 
 const (
-	splunkLicenseEnv        = "SPLUNK_LICENSE_ACCEPTED"
+	splunkLicenseEnv        = "SPLUNK_ACCEPT_LICENSE"
 	splunkFlagAcceptLicense = "--accept-license"
 )
 
