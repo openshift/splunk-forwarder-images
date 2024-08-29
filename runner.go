@@ -33,6 +33,7 @@ const UserSeedPath = "${SPLUNK_HOME}/etc/system/local/user-seed.conf"
 const ServerConfigPath = "${SPLUNK_HOME}/etc/system/local/server.conf"
 const HealthEndpoint = "/services/server/health/splunkd/details"
 const SplunkCryptPath = "${SPLUNK_HOME}/etc/passwd"
+const SplunkdLogPath = "${SPLUNK_HOME}/var/log/splunk/splunkd.log"
 const SplunkServerConfTemplate = `
 [httpServer]
 acceptFrom = 127.0.0.0/8
@@ -59,6 +60,11 @@ type Feature struct {
 }
 
 type SplunkHealth Feature
+
+const (
+	splunkLicenseEnv        = "SPLUNK_ACCEPT_LICENSE"
+	splunkFlagAcceptLicense = "--accept-license"
+)
 
 var healthURL = &url.URL{
 	Scheme:   "http",
@@ -203,7 +209,7 @@ var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.
 
 func RunSplunk() bool {
 	name := expandEnv(SplunkPath)
-	args := []string{"start", "--answer-yes", "--nodaemon"}
+	args := []string{"start", splunkFlagAcceptLicense, "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
 	cmd = exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = os.Stderr
@@ -214,6 +220,16 @@ func RunSplunk() bool {
 	if cmd.Wait() != nil {
 		return false
 	}
+	return ctx.Err() == nil
+}
+
+func TailFile() bool {
+	args := []string{"-F", os.ExpandEnv(SplunkdLogPath)}
+	tail := exec.CommandContext(ctx, "/usr/bin/tail", args...)
+	tail.Stdout = os.Stderr
+	tail.Stderr = os.Stderr
+	_ = tail.Start()
+	_ = tail.Wait()
 	return ctx.Err() == nil
 }
 
@@ -246,11 +262,11 @@ func StartServer() {
 			gaugeVec.Reset()
 		}
 		for k, v := range health.Flatten() {
-			guage := gaugeVec.WithLabelValues(k)
+			gauge := gaugeVec.WithLabelValues(k)
 			if v.Healthy() {
-				guage.Set(0)
+				gauge.Set(0)
 			} else {
-				guage.Set(1)
+				gauge.Set(1)
 			}
 		}
 		handler.ServeHTTP(w, r)
@@ -288,7 +304,6 @@ func StartServer() {
 	s := http.Server{Handler: http.DefaultServeMux, ReadHeaderTimeout: time.Second * 5}
 
 	log.Fatal(s.Serve(l))
-
 }
 
 func (h *SplunkHealth) Check() bool {
@@ -323,11 +338,24 @@ func main() {
 		log.Fatal("couldn't enable splunk api: ", err.Error())
 	}
 
-	go StartServer()
-
-	for RunSplunk() {
-		log.Println("splunkd exited, restarting in 5 seconds")
-		time.Sleep(time.Second * 5)
+	if os.Getenv(splunkLicenseEnv) == "yes" {
+		log.Println("splunk license agreement has been accepted")
+	} else {
+		log.Println("you must accept the terms of the Splunk licensing agreement before using this software.")
+		log.Fatalf("set the variable %s to 'yes' to signal your acceptance of the licensing terms", splunkLicenseEnv)
 	}
 
+	go StartServer()
+
+	go func() {
+		for RunSplunk() {
+			log.Println("splunkd exited, restarting in 5 seconds")
+			time.Sleep(time.Second * 5)
+		}
+	}()
+
+	for TailFile() {
+		log.Println("tail exited, restarting in 5 seconds")
+		time.Sleep(time.Second * 5)
+	}
 }

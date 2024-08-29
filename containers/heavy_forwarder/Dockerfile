@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1137
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1018
 
 ADD containers/heavy_forwarder/bin/run.sh /
 ADD .splunk-version /
@@ -6,7 +6,7 @@ ADD .splunk-version-hash /
 RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk-version-hash) && \
     microdnf install -y libsemanage shadow-utils findutils procps wget && \
     microdnf clean all && \
-    wget -O /tmp/splunk.rpm "https://download.splunk.com/products/splunk/releases/${VERSION}/linux/splunk-${VERSION}-${VERSION_HASH}-linux-2.6-x86_64.rpm" && \
+    wget -O /tmp/splunk.rpm "https://download.splunk.com/products/splunk/releases/${VERSION}/linux/splunk-${VERSION}-${VERSION_HASH}.x86_64.rpm" && \
     rpm -ivh /tmp/splunk.rpm && \
     rm -f /tmp/splunk.rpm && \
     mkdir -p /host && chown splunk:splunk /host && \
