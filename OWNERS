@@ -1,12 +1,8 @@
 reviewers:
-- wshearn
-- jaybeeunix
-- gsleeman
-- c-e-brumm
+- afreiberger
+- srep-functional-team-security
 approvers:
-- wshearn
-- jaybeeunix
-- gsleeman
+- srep-functional-team-security
 - karthikperu7
 maintainers:
 - jaybeeunix
