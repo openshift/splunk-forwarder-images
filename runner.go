@@ -96,7 +96,7 @@ func genPasswd() ([]byte, error) {
 }
 
 func generateUserSeed() error {
-	if seedFile, err := os.OpenFile(os.ExpandEnv(userSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if seedFile, err := os.OpenFile(os.ExpandEnv(userSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644); err != nil {
 		return err
 	} else if passwd, err := genPasswd(); err != nil {
 		return err
@@ -108,7 +108,7 @@ func generateUserSeed() error {
 }
 
 func enableSplunkAPI() error {
-	if serverFile, err := os.OpenFile(os.ExpandEnv(serverConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if serverFile, err := os.OpenFile(os.ExpandEnv(serverConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644); err != nil {
 		return err
 	} else {
 		defer serverFile.Close()
