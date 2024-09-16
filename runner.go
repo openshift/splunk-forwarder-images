@@ -45,18 +45,13 @@ type Status struct {
 	} `json:"reasons,omitempty"`
 }
 
+func (s Status) Healthy() bool {
+	return s.Health == "green"
+}
+
 type Feature struct {
 	Status
 	Features map[string]Feature `json:"features,omitempty"`
-}
-
-type SplunkHealth Feature
-
-var healthURL = &url.URL{
-	Scheme:   "http",
-	Host:     splunkHost,
-	Path:     healthEndpoint,
-	RawQuery: url.Values{"output_mode": []string{"json"}}.Encode(),
 }
 
 func (s Feature) Flatten(prefix ...string) map[string]Status {
@@ -72,12 +67,17 @@ func (s Feature) Flatten(prefix ...string) map[string]Status {
 	return out
 }
 
-func (s Status) Healthy() bool {
-	return s.Health == "green"
-}
+type SplunkHealth Feature
 
 func (s SplunkHealth) Flatten() map[string]Status {
 	return (Feature)(s).Flatten()
+}
+
+var healthURL = &url.URL{
+	Scheme:   "http",
+	Host:     splunkHost,
+	Path:     healthEndpoint,
+	RawQuery: url.Values{"output_mode": []string{"json"}}.Encode(),
 }
 
 func genPasswd() ([]byte, error) {
