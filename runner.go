@@ -209,7 +209,7 @@ func StartServer() {
 		}
 	}))
 
-	http.ListenAndServe("0.0.0.0:8090", http.DefaultServeMux)
+	http.ListenAndServe("0.0.0.0:8090", nil)
 }
 
 func (h *SplunkHealth) Check() bool {
