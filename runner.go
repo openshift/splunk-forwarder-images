@@ -128,9 +128,8 @@ no_proxy = %s
 }
 
 var cmd *exec.Cmd
-var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-func RunSplunk() bool {
+func RunSplunk(ctx context.Context) bool {
 	args := []string{"start", splunkFlagAcceptLicense, "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
 	cmd = exec.CommandContext(ctx, os.ExpandEnv(splunkPath), args...)
@@ -141,7 +140,7 @@ func RunSplunk() bool {
 	return ctx.Err() == nil
 }
 
-func TailFile() bool {
+func TailFile(ctx context.Context) bool {
 	args := []string{"-F", os.ExpandEnv(splunkdLogPath)}
 	tail := exec.CommandContext(ctx, "/usr/bin/tail", args...)
 	tail.Stdout = os.Stderr
@@ -252,16 +251,17 @@ func main() {
 		log.Fatalf("set the variable %s to 'yes' to signal your acceptance of the licensing terms", splunkLicenseEnv)
 	}
 
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	go StartServer()
 
 	go func() {
-		for RunSplunk() {
+		for RunSplunk(ctx) {
 			log.Println("splunkd exited, restarting in 5 seconds")
 			time.Sleep(time.Second * 5)
 		}
 	}()
 
-	for TailFile() {
+	for TailFile(ctx) {
 		log.Println("tail exited, restarting in 5 seconds")
 		time.Sleep(time.Second * 5)
 	}
