@@ -19,15 +19,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const SplunkUser = "admin"
-const SplunkHost = "127.0.0.1:8089"
-const SplunkPath = "${SPLUNK_HOME}/bin/splunk"
-const SplunkCACert = "${SPLUNK_HOME}/etc/auth/cacert.pem"
-const UserSeedPath = "${SPLUNK_HOME}/etc/system/local/user-seed.conf"
-const ServerConfigPath = "${SPLUNK_HOME}/etc/system/local/server.conf"
-const HealthEndpoint = "/services/server/health/splunkd/details"
-const SplunkPasswdPath = "${SPLUNK_HOME}/etc/passwd"
-const SplunkdLogPath = "${SPLUNK_HOME}/var/log/splunk/splunkd.log"
+const (
+	healthEndpoint          = "/services/server/health/splunkd/details"
+	serverConfigPath        = "${SPLUNK_HOME}/etc/system/local/server.conf"
+	splunkCACert            = "${SPLUNK_HOME}/etc/auth/cacert.pem"
+	splunkFlagAcceptLicense = "--accept-license"
+	splunkHost              = "127.0.0.1:8089"
+	splunkLicenseEnv        = "SPLUNK_ACCEPT_LICENSE"
+	splunkPasswdPath        = "${SPLUNK_HOME}/etc/passwd"
+	splunkPath              = "${SPLUNK_HOME}/bin/splunk"
+	splunkUser              = "admin"
+	splunkdLogPath          = "${SPLUNK_HOME}/var/log/splunk/splunkd.log"
+	userSeedPath            = "${SPLUNK_HOME}/etc/system/local/user-seed.conf"
+)
 
 type Status struct {
 	Health  string
@@ -48,15 +52,10 @@ type Feature struct {
 
 type SplunkHealth Feature
 
-const (
-	splunkLicenseEnv        = "SPLUNK_ACCEPT_LICENSE"
-	splunkFlagAcceptLicense = "--accept-license"
-)
-
 var healthURL = &url.URL{
 	Scheme:   "http",
-	Host:     SplunkHost,
-	Path:     HealthEndpoint,
+	Host:     splunkHost,
+	Path:     healthEndpoint,
 	RawQuery: url.Values{"output_mode": []string{"json"}}.Encode(),
 }
 
@@ -82,9 +81,9 @@ func (s SplunkHealth) Flatten() map[string]Status {
 }
 
 func genPasswd() ([]byte, error) {
-	os.Remove(os.ExpandEnv(SplunkPasswdPath))
+	os.Remove(os.ExpandEnv(splunkPasswdPath))
 	passwd := new(bytes.Buffer)
-	if output, err := exec.Command(os.ExpandEnv(SplunkPath), "gen-random-passwd").Output(); err != nil {
+	if output, err := exec.Command(os.ExpandEnv(splunkPath), "gen-random-passwd").Output(); err != nil {
 		log.Fatal(err)
 		return nil, err
 	} else {
@@ -92,24 +91,24 @@ func genPasswd() ([]byte, error) {
 	}
 
 	log.Println(passwd.String())
-	healthURL.User = url.UserPassword(SplunkUser, passwd.String())
+	healthURL.User = url.UserPassword(splunkUser, passwd.String())
 	return passwd.Bytes(), nil
 }
 
 func generateUserSeed() error {
-	if seedFile, err := os.OpenFile(os.ExpandEnv(UserSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if seedFile, err := os.OpenFile(os.ExpandEnv(userSeedPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return err
 	} else if passwd, err := genPasswd(); err != nil {
 		return err
 	} else {
 		defer seedFile.Close()
-		_, err = fmt.Fprintf(seedFile, "[user_info]\nUSERNAME = %s\nPASSWORD = %s\n", SplunkUser, string(passwd))
+		_, err = fmt.Fprintf(seedFile, "[user_info]\nUSERNAME = %s\nPASSWORD = %s\n", splunkUser, string(passwd))
 		return err
 	}
 }
 
 func enableSplunkAPI() error {
-	if serverFile, err := os.OpenFile(os.ExpandEnv(ServerConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if serverFile, err := os.OpenFile(os.ExpandEnv(serverConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return err
 	} else {
 		defer serverFile.Close()
@@ -134,7 +133,7 @@ var ctx, _ = signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.
 func RunSplunk() bool {
 	args := []string{"start", splunkFlagAcceptLicense, "--answer-yes", "--nodaemon"}
 	args = append(args, os.Args[1:]...)
-	cmd = exec.CommandContext(ctx, os.ExpandEnv(SplunkPath), args...)
+	cmd = exec.CommandContext(ctx, os.ExpandEnv(splunkPath), args...)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	_ = cmd.Start()
@@ -143,7 +142,7 @@ func RunSplunk() bool {
 }
 
 func TailFile() bool {
-	args := []string{"-F", os.ExpandEnv(SplunkdLogPath)}
+	args := []string{"-F", os.ExpandEnv(splunkdLogPath)}
 	tail := exec.CommandContext(ctx, "/usr/bin/tail", args...)
 	tail.Stdout = os.Stderr
 	tail.Stderr = os.Stderr
