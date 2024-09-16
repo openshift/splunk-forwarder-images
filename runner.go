@@ -116,11 +116,7 @@ func enableSplunkAPI() error {
 enableSplunkdSSL = false
 [httpServer]
 acceptFrom = 127.0.0.1/8
-[proxyConfig]
-http_proxy = %s
-https_proxy = %s
-no_proxy = %s
-`, os.Getenv("HTTP_PROXY"), os.Getenv("HTTPS_PROXY"), os.Getenv("no_proxy"))
+`)
 
 		return err
 	}
