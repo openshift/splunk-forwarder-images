@@ -21,6 +21,8 @@ import (
 
 const (
 	healthEndpoint          = "/services/server/health/splunkd/details"
+	notOk                   = "not ok\n"
+	ok                      = "ok\n"
 	serverConfigPath        = "${SPLUNK_HOME}/etc/system/local/server.conf"
 	splunkCACert            = "${SPLUNK_HOME}/etc/auth/cacert.pem"
 	splunkFlagAcceptLicense = "--accept-license"
@@ -182,20 +184,20 @@ func StartServer() {
 	http.Handle("/livez", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("not ok"))
+			w.Write([]byte(notOk))
 		} else {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			w.Write([]byte(ok))
 		}
 	}))
 
 	http.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if health.Check() {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("ok"))
+			w.Write([]byte(ok))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("not ok"))
+			w.Write([]byte(notOk))
 		}
 		nok := map[bool]string{false: "not ok", true: "ok"}
 		if r.URL.Query().Has("verbose") {
