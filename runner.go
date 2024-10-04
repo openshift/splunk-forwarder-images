@@ -31,6 +31,13 @@ const (
 	splunkUser              = "admin"
 	splunkdLogPath          = "${SPLUNK_HOME}/var/log/splunk/splunkd.log"
 	userSeedPath            = "${SPLUNK_HOME}/etc/system/local/user-seed.conf"
+
+	serverConfigContent = `[sslConfig]
+enableSplunkdSSL = false
+[httpServer]
+mgmtMode = tcp
+acceptFrom = 127.0.0.1/8
+`
 )
 
 type Status struct {
@@ -108,19 +115,14 @@ func generateUserSeed() error {
 }
 
 func enableSplunkAPI() error {
-	if serverFile, err := os.OpenFile(os.ExpandEnv(serverConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644); err != nil {
+	if serverConfigFile, err := os.OpenFile(os.ExpandEnv(serverConfigPath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644); err != nil {
 		return err
 	} else {
-		defer serverFile.Close()
-		_, err = fmt.Fprintf(serverFile, `[sslConfig]
-enableSplunkdSSL = false
-[httpServer]
-acceptFrom = 127.0.0.1/8
-`)
+		defer serverConfigFile.Close()
+		_, err = fmt.Fprintf(serverConfigFile, serverConfigContent)
 
 		return err
 	}
-
 }
 
 var cmd *exec.Cmd
@@ -147,10 +149,9 @@ func TailFile(ctx context.Context) bool {
 }
 
 func StartServer() {
+	health := &SplunkHealth{}
 
-	var health = &SplunkHealth{}
-
-	var gaugeVec = *prometheus.NewGaugeVec(prometheus.GaugeOpts{
+	gaugeVec := *prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "splunk_forwarder",
 		Subsystem: "component",
 		Name:      "unhealthy",
@@ -231,7 +232,6 @@ func (h *SplunkHealth) Check() bool {
 }
 
 func main() {
-
 	if err := generateUserSeed(); err != nil {
 		log.Fatal("couldn't generate admin user seed: ", err.Error())
 	}
