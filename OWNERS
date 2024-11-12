@@ -2,11 +2,11 @@ reviewers:
 - aleccohan
 - afreiberger
 - srep-functional-team-security
-- srep-functional-leads
-- srep-team-leads
 approvers:
 - srep-functional-team-security
 - karthikperu7
+- srep-functional-leads
+- srep-team-leads
 maintainers:
 - jaybeeunix
 - wshearn
