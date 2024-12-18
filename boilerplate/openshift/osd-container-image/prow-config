@@ -97,10 +97,6 @@ tests:
   commands: make test
   container:
     from: src
-- as: validate
-  commands: make validate
-  container:
-    from: src
 zz_generated_metadata:
   branch: ${DEFAULT_BRANCH}
   org: ${CONSUMER_ORG}

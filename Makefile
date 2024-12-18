@@ -1,9 +1,8 @@
+include project.mk
 include boilerplate/generated-includes.mk
 
 SHELL := /usr/bin/env bash
 
-IMAGE_REGISTRY ?= quay.io
-IMAGE_REPOSITORY ?= app-sre
 QUAY_USER ?=
 QUAY_TOKEN ?=
 CONTAINER_ENGINE_CONFIG_DIR = .docker

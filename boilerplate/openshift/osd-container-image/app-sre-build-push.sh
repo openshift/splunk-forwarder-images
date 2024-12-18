@@ -4,7 +4,7 @@ set -ev
 
 usage() {
     cat <<EOF
-    Usage: $0 REGISTRY_IMAGE CURRENT_COMMIT "IMAGE_SPECS"
+    Usage: $0 "IMAGE_SPECS"
     IMAGE_SPECS is a multiline string where each line has the format:
 
 dockerfile_path image_uri
@@ -26,11 +26,9 @@ EOF
 REPO_ROOT=$(git rev-parse --show-toplevel)
 source $REPO_ROOT/boilerplate/_lib/common.sh
 
-[[ $# -eq 3 ]] || usage
+[[ $# -eq 1 ]] || usage
 
-REGISTRY_IMAGE=$1
-CURRENT_COMMIT=$2
-IMAGE_SPECS="$3"
+IMAGE_SPECS="$1"
 
 while read dockerfile_path image_uri junk; do
     # Support comment lines
@@ -55,27 +53,7 @@ while read dockerfile_path image_uri junk; do
     if image_exists_in_repo "${image_uri}"; then
         echo "Skipping build/push for ${image_uri}"
     else
-        # build and push the operator image
-        make IMAGE_URI="${image_uri}" DOCKERFILE_PATH="${dockerfile_path}" docker-build-push-one
+        # build and push the image
+        make IMAGE_URI="${image_uri}" DOCKERFILE_PATH="${dockerfile_path}" osd-container-image-build-push-one
     fi
-done <<< "$3"
-
-declare -A hash
-if [[ "${RELEASE_BRANCHED_BUILDS}" ]]; then
-    hash[stable]=v${OPERATOR_VERSION}
-else
-    hash[staging]=staging-${CURRENT_COMMIT}
-    hash[production]=production-${CURRENT_COMMIT}
-fi
-for channel in "${!hash[@]}"; do
-    tag=${hash[$channel]}
-    # If the catalog image already exists, short out
-    if image_exists_in_repo "${REGISTRY_IMAGE}:${tag}"; then
-        echo "Catalog image ${REGISTRY_IMAGE}:${tag} already "
-        echo "exists. Assuming this means the saas bundle work has also been done "
-        echo "properly. Nothing to do!"
-    else
-        # build the CSV and create & push image catalog for the appropriate channel
-        make ${channel}-csv-build ${channel}-catalog-build ${channel}-catalog-publish
-    fi
-done
+done <<< "$1"
