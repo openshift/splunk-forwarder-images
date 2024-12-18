@@ -1,4 +1,4 @@
-include project.mk
+include variables.mk
 include boilerplate/generated-includes.mk
 
 SHELL := /usr/bin/env bash
