@@ -20,38 +20,24 @@ FORWARDER_NAME=splunk-forwarder
 FORWARDER_IMAGE_URI=$(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(FORWARDER_NAME):$(IMAGE_TAG)
 FORWARDER_DOCKERFILE = ./containers/forwarder/Dockerfile
 
-HEAVYFORWARDER_NAME=splunk-heavyforwarder
-HEAVYFORWARDER_IMAGE_URI=$(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(HEAVYFORWARDER_NAME):$(IMAGE_TAG)
-HEAVYFORWARDER_DOCKERFILE = ./containers/heavy_forwarder/Dockerfile
 
 .PHONY: build-forwarder
 build-forwarder:
 	$(CONTAINER_ENGINE) build . -f $(FORWARDER_DOCKERFILE) -t $(FORWARDER_IMAGE_URI)
 
-.PHONY: build-heavyforwarder
-build-heavyforwarder:
-	$(CONTAINER_ENGINE) build . -f $(HEAVYFORWARDER_DOCKERFILE) -t $(HEAVYFORWARDER_IMAGE_URI)
-
 .PHONY: push-forwarder
 push-forwarder:
 	skopeo copy --dest-creds "$(QUAY_USER):$(QUAY_TOKEN)" "docker-daemon:$(FORWARDER_IMAGE_URI)" "docker://$(FORWARDER_IMAGE_URI)"
 
-# Use caution: this is huge
-.PHONY: push-heavyforwarder
-push-heavyforwarder:
-	skopeo copy --dest-creds "$(QUAY_USER):$(QUAY_TOKEN)" "docker-daemon:$(HEAVYFORWARDER_IMAGE_URI)" "docker://$(HEAVYFORWARDER_IMAGE_URI)"
-
 .PHONY: vuln-check
-vuln-check: build-forwarder build-heavyforwarder
+vuln-check: build-forwarder
 	./hack/check-image-against-osd-sre-clair.sh $(FORWARDER_IMAGE_URI)
-	./hack/check-image-against-osd-sre-clair.sh $(HEAVYFORWARDER_IMAGE_URI)
 
 ##################
 ### Used by CD >>>
 .PHONY: build-push
 build-push: docker-login
 	./hack/app-sre-build-push.sh "$(FORWARDER_IMAGE_URI)" "$(FORWARDER_DOCKERFILE)"
-	./hack/app-sre-build-push.sh "$(HEAVYFORWARDER_IMAGE_URI)" "$(HEAVYFORWARDER_DOCKERFILE)"
 
 .PHONY: docker-login
 docker-login:
