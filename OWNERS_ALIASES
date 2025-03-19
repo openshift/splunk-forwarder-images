@@ -6,7 +6,7 @@ aliases:
   srep-functional-team-aurora:
     - abyrne55
     - dakotalongRH
-    - lnguyen1401
+    - joshbranham
     - luis-falcon
     - reedcort
   srep-functional-team-fedramp:
@@ -20,7 +20,6 @@ aliases:
     - fsferraz-rh
   srep-functional-team-hulk:
     - a7vicky
-    - rendhalver
     - ravitri
     - shitaljante
     - devppratik
@@ -53,6 +52,7 @@ aliases:
     - npecka
     - pshickeydev
     - casey-williams-rh
+    - boranx
   srep-functional-team-thor:
     - bmeng
     - MitaliBhalla
@@ -76,11 +76,9 @@ aliases:
     - bmeng
     - sam-nguyen7
     - ravitri
-    - mmazur
   srep-team-leads:
     - rafael-azevedo
     - iamkirkbater
-    - NautiluX
     - rogbas
     - fahlmant
     - dustman9000
