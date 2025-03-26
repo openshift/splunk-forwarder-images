@@ -4,6 +4,7 @@ reviewers:
 - srep-functional-team-security
 approvers:
 - srep-functional-team-security
+- srep-functional-team-fedramp
 - karthikperu7
 - srep-functional-leads
 - srep-team-leads
