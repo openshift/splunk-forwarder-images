@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/boilerplate:image-v5.0.0 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v7.0.0 AS builder
 ADD . /go/src/github.com/openshift/splunk-forwarder-images
 WORKDIR /go/src/github.com/openshift/splunk-forwarder-images
 RUN env CGO_ENABLED=1 GOOS=linux go build -ldflags "-extldflags=-static -w -s" -o runner ./
