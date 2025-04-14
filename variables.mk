@@ -17,4 +17,4 @@ IMAGE_REPOSITORY ?= app-sre
 IMAGE_NAME = splunk-forwarder
 IMAGE = $(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME)
 IMAGE_URI := $(IMAGE):$(IMAGE_TAG)
-DOCKERFILE = ./build/Dockerfile.forwarder
+DOCKERFILE = ./build/Dockerfile
