@@ -3,7 +3,7 @@ COPY . /go/src/github.com/openshift/splunk-forwarder-images
 WORKDIR /go/src/github.com/openshift/splunk-forwarder-images
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner ./
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1179.1741795396
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1179.1741863533
 
 COPY --from=builder /go/src/github.com/openshift/splunk-forwarder-images/runner /
 COPY .splunk-version /
