@@ -1,11 +1,11 @@
 FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v7.3.0 AS builder
-COPY . /go/src/github.com/openshift/splunk-forwarder-images
-WORKDIR /go/src/github.com/openshift/splunk-forwarder-images
-RUN env CGO_ENABLED=1 GOOS=linux go build -o runner ./
+WORKDIR /build
+COPY . .
+RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1179.1741863533
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1295
 
-COPY --from=builder /go/src/github.com/openshift/splunk-forwarder-images/runner /
+COPY --from=builder /build/runner /
 COPY .splunk-version /
 COPY .splunk-version-hash /
 RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk-version-hash) && \
