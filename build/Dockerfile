@@ -3,7 +3,7 @@ WORKDIR /build
 COPY . .
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1295.1749680713.1749680713
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1295.1749680713
 
 COPY --from=builder /build/runner /
 COPY containers/forwarder/bin/systemctl_wrapper.sh /bin/systemctl
