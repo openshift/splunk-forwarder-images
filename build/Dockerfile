@@ -1,4 +1,4 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.1 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.2 AS builder
 WORKDIR /build
 COPY . .
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
