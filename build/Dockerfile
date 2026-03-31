@@ -23,6 +23,8 @@ RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk
     mkdir -p /opt/splunkforwarder/var/spool/dirmoncache && \
     mkdir -p /opt/splunkforwarder/etc/apps/osd_monitored_logs/{local,metadata} && \
     mkdir -p /opt/splunkforwarder/etc/apps/splunkauth/{default,local,metadata} && \
+    rm -f /opt/splunkforwarder/etc/auth/ca.pem.default && \
+    rm -f /opt/splunkforwarder/etc/auth/prev_release/ca.pem.default && \
     chown -R splunkfwd:splunkfwd /opt/splunkforwarder && \
     chgrp splunkfwd /runner && \
     chmod +x /runner /bin/systemctl && \
