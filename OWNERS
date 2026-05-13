@@ -1,13 +1,9 @@
 reviewers:
-- aleccohan
-- afreiberger
 - srep-functional-team-security
+- srep-functional-team-rocket
 approvers:
 - srep-functional-team-security
+- srep-functional-team-rocket
 - srep-functional-team-fedramp
-- karthikperu7
 - srep-functional-leads
 - srep-team-leads
-maintainers:
-- jaybeeunix
-- wshearn
