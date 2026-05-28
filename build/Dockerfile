@@ -1,9 +1,9 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.2 AS builder
+FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.3.6 AS builder
 WORKDIR /build
 COPY . .
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1771346502
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1779809423
 
 COPY --from=builder /build/runner /
 COPY containers/forwarder/bin/systemctl_wrapper.sh /bin/systemctl
