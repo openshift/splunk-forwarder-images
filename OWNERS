@@ -1,9 +1,6 @@
 reviewers:
-- srep-functional-team-security
 - srep-functional-team-rocket
 approvers:
-- srep-functional-team-security
 - srep-functional-team-rocket
 - srep-functional-team-fedramp
-- srep-functional-leads
-- srep-team-leads
+- rosa-staff-engineers
