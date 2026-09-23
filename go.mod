@@ -2,6 +2,8 @@ module github.com/openshift/splunk-forwarder-images
 
 go 1.25.9
 
+toolchain go1.25.12
+
 require github.com/prometheus/client_golang v1.23.2
 
 require (
