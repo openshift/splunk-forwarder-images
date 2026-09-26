@@ -27,3 +27,4 @@ To test the app-sre pipeline:
 - Create personal repositories and override variables as described [above](#local-buildtest).
 - Obtain credentials from your personal repository and set the `QUAY_USER` and `QUAY_TOKEN` variables.
 - Run `make build-push`.
+
