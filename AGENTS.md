@@ -15,10 +15,10 @@ splunk-forwarder-images builds the Splunk Universal Forwarder container image co
 
 ## Image Flow
 
-- Local/app-sre builds default to `quay.io/app-sre/splunk-forwarder:<IMAGE_TAG>`.
-- Konflux builds publish component images under `quay.io/redhat-user-workloads/splunk-forwarder-images-tenant/openshift/splunk-forwarder-images`.
-- Released/promoted images are consumed as `quay.io/redhat-services-prod/openshift/splunk-forwarder-images`.
-- `splunk-forwarder-operator` references the promoted image and image digest in its OLM templates and SplunkForwarder CRs.
+- This repo builds the Splunk forwarder image consumed by `splunk-forwarder-operator`.
+- Konflux builds component images for this repo, and promoted release images are consumed by the operator.
+- The operator references the promoted image and digest in its OLM templates and SplunkForwarder CRs.
+- The forwarder image is deployed by the operator as workload pods; it is not baked into the operator image.
 
 ## Build / Test
 
