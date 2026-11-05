@@ -20,16 +20,18 @@ Run vulnerability checks using `make vuln-check`.
 
 `build/Dockerfile` migrates the existing image in place to the supported
 [Red Hat Hummingbird core runtime](https://gitlab.com/redhat/hummingbird/containers).
-The runtime and its installer stage are digest-pinned. The installer adds Splunk
-and its shell, core utilities, process tools, and libraries to a separate root
-filesystem; DNF, RPM, and the download tool stay in the installer stage.
+The runtime and its installer stage use the floating Red Hat tags `latest` and
+`latest-builder`, respectively. The installer adds Splunk and its shell, core
+utilities, process tools, and libraries to a separate root filesystem; DNF, RPM,
+and the download tool stay in the installer stage.
 The final image runs `/runner` as `splunkfwd`.
 
 Build with `make build`. The pinned Splunk RPM is x86_64, so on an ARM host use
 `DOCKER_DEFAULT_PLATFORM=linux/amd64 make build CONTAINER_ENGINE=docker`.
 
-Konflux continues to build the same Dockerfile and component. Review Hummingbird
-base digest updates through MintMaker and the existing build/release gates.
+Konflux continues to build the same Dockerfile and component. Builds resolve the
+floating Hummingbird tags and validate the resulting image through the existing
+build/release gates.
 Before promotion, validate forwarding through the operator, health endpoints,
 volume permissions, vulnerability scans, Enterprise Contract, and release gates.
 FIPS behavior requires separate validation on a FIPS-enabled target cluster.

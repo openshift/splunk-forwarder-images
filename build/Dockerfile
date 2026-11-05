@@ -4,9 +4,9 @@ COPY go.mod go.sum runner.go ./
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
 # Keep package installation tools in a separate stage from the exported image.
-FROM registry.access.redhat.com/hi/core-runtime:latest@sha256:4163796d8b7f28021178093d31cb97c05336fd3f3a4d7006603a7fef29e997e7 AS runtime-base
+FROM registry.access.redhat.com/hi/core-runtime:latest AS runtime-base
 
-FROM registry.access.redhat.com/hi/core-runtime:latest-builder@sha256:1b0d090e58988b4af532f126371ce0938a8c10ff930f6dac3299df3b15d5ae77 AS installer
+FROM registry.access.redhat.com/hi/core-runtime:latest-builder AS installer
 USER 0
 COPY --from=runtime-base / /runtime/
 
