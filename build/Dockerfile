@@ -1,21 +1,30 @@
 FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.4.4 AS builder
 WORKDIR /build
-COPY . .
+COPY go.mod go.sum runner.go ./
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1791898448
+# Keep package installation tools in a separate stage from the exported image.
+FROM registry.access.redhat.com/hi/core-runtime:latest@sha256:4163796d8b7f28021178093d31cb97c05336fd3f3a4d7006603a7fef29e997e7 AS runtime-base
 
-COPY --from=builder /build/runner /
-COPY containers/forwarder/bin/systemctl_wrapper.sh /bin/systemctl
+FROM registry.access.redhat.com/hi/core-runtime:latest-builder@sha256:1b0d090e58988b4af532f126371ce0938a8c10ff930f6dac3299df3b15d5ae77 AS installer
+USER 0
+COPY --from=runtime-base / /runtime/
+
+RUN dnf --installroot=/runtime --use-host-config --setopt=install_weak_deps=False install -y \
+        bash coreutils-single libsemanage shadow-utils findutils procps-ng grep sed && \
+    dnf --installroot=/runtime --use-host-config clean all
+
+COPY --from=builder /build/runner /runtime/
+COPY containers/forwarder/bin/systemctl_wrapper.sh /runtime/bin/systemctl
 COPY .splunk-version /
 COPY .splunk-version-hash /
 RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk-version-hash) && \
-    microdnf install -y libsemanage shadow-utils findutils procps wget && \
-    microdnf clean all && \
-    wget -O /tmp/splunkforwarder.rpm "https://download.splunk.com/products/universalforwarder/releases/${VERSION}/linux/splunkforwarder-${VERSION}-${VERSION_HASH}.x86_64.rpm" && \
-    rpm -ivh /tmp/splunkforwarder.rpm && \
+    curl --fail --location --output /tmp/SplunkPGPKey.pub https://docs.splunk.com/images/6/6b/SplunkPGPKey.pub && \
+    rpm --root /runtime --import /tmp/SplunkPGPKey.pub && \
+    curl --fail --location --output /tmp/splunkforwarder.rpm "https://download.splunk.com/products/universalforwarder/releases/${VERSION}/linux/splunkforwarder-${VERSION}-${VERSION_HASH}.x86_64.rpm" && \
+    rpm --root /runtime -ivh /tmp/splunkforwarder.rpm && \
     rm -f /tmp/splunkforwarder.rpm && \
-    mkdir -p /host && chown splunkfwd:splunkfwd /host && \
+    chroot /runtime /bin/bash -ec 'mkdir -p /host && chown splunkfwd:splunkfwd /host && \
     mkdir -p /opt/splunkforwarder/var/{lib,run,spool}/splunk && \
     mkdir -p /opt/splunkforwarder/var/lib/splunk/{authDb,hashDb} && \
     mkdir -p /opt/splunkforwarder/var/run/splunk/appserver/{i18n,modules/static/css} && \
@@ -26,9 +35,14 @@ RUN export VERSION=$(cat /.splunk-version) && export VERSION_HASH=$(cat /.splunk
     chown -R splunkfwd:splunkfwd /opt/splunkforwarder && \
     chgrp splunkfwd /runner && \
     chmod +x /runner /bin/systemctl && \
-    sed -i 's/\.maxBackupIndex=5/\.maxBackupIndex=1/g' /opt/splunkforwarder/etc/log.cfg && \
-    sed -i 's/\.maxFileSize=25000000/\.maxFileSize=250000/g' /opt/splunkforwarder/etc/log.cfg
+    sed -i "s/\.maxBackupIndex=5/\.maxBackupIndex=1/g" /opt/splunkforwarder/etc/log.cfg && \
+    sed -i "s/\.maxFileSize=25000000/\.maxFileSize=250000/g" /opt/splunkforwarder/etc/log.cfg'
 
+FROM runtime-base
+COPY --from=installer /runtime/ /
+COPY .splunk-version .splunk-version-hash /
+# Clear any entrypoint inherited from the base so CMD starts the runner.
+ENTRYPOINT []
 ENV SPLUNK_HOME=/opt/splunkforwarder
 USER splunkfwd
 CMD [ "/runner" ]
