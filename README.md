@@ -26,8 +26,9 @@ utilities, process tools, and libraries to a separate root filesystem; DNF, RPM,
 and the download tool stay in the installer stage.
 The final image runs `/runner` as `splunkfwd`.
 
-Build with `make build`. The pinned Splunk RPM is x86_64, so on an ARM host use
-`DOCKER_DEFAULT_PLATFORM=linux/amd64 make build CONTAINER_ENGINE=docker`.
+Build with `make build`. The Go builder and pinned Splunk RPM are x86_64, so the
+Dockerfile selects `linux/amd64` for all base images, including on ARM hosts.
+Building on ARM requires AMD64 emulation in the container engine.
 
 Konflux continues to build the same Dockerfile and component. Builds resolve the
 floating Hummingbird tags and validate the resulting image through the existing
