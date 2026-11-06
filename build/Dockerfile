@@ -1,12 +1,13 @@
-FROM quay.io/redhat-services-prod/openshift/boilerplate:image-v8.4.4 AS builder
+# The Go builder and Splunk RPM are x86_64; keep every stage on that platform.
+FROM --platform=linux/amd64 quay.io/redhat-services-prod/openshift/boilerplate:image-v8.4.4 AS builder
 WORKDIR /build
 COPY go.mod go.sum runner.go ./
 RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 
 # Keep package installation tools in a separate stage from the exported image.
-FROM registry.access.redhat.com/hi/core-runtime:latest AS runtime-base
+FROM --platform=linux/amd64 registry.access.redhat.com/hi/core-runtime:latest AS runtime-base
 
-FROM registry.access.redhat.com/hi/core-runtime:latest-builder AS installer
+FROM --platform=linux/amd64 registry.access.redhat.com/hi/core-runtime:latest-builder AS installer
 USER 0
 COPY --from=runtime-base / /runtime/
 
