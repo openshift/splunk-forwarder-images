@@ -1,6 +1,8 @@
 reviewers:
+- rosa-trust-engineering-observability
 - srep-functional-team-rocket
 approvers:
+- rosa-trust-engineering-observability
 - srep-functional-team-rocket
 - srep-functional-team-fedramp
 - rosa-staff-engineers
