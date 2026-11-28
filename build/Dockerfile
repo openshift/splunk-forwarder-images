@@ -7,7 +7,7 @@ RUN env CGO_ENABLED=1 GOOS=linux go build -o runner
 # Keep package installation tools in a separate stage from the exported image.
 FROM --platform=linux/amd64 registry.access.redhat.com/hi/core-runtime:latest@sha256:81280d7fd6afa7a3d2a6da2e90e545cf8e5d187c80a69b2a1c875fdcd731aaed AS runtime-base
 
-FROM --platform=linux/amd64 registry.access.redhat.com/hi/core-runtime:latest-builder@sha256:8668ae547b8a08e13df5783bc610a113cd70f6b8cf3c146a78209a8fc867cbae AS installer
+FROM --platform=linux/amd64 registry.access.redhat.com/hi/core-runtime:latest-builder@sha256:b5dde8558909bd4ea2d308861d3003d0c6cd8e739f6c3ff54fecf9a9fc9e1c53 AS installer
 USER 0
 COPY --from=runtime-base / /runtime/
 
